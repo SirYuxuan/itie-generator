@@ -183,14 +183,14 @@ export async function generatePDF(config: HandwritingConfig) {
             })
           }
 
-          // 绘制中文含义 (在四线下方)
+          // 绘制中文含义 (挨着第四线下方)
           if (item.meaning) {
             doc.setTextColor(22, 163, 74) // 绿色
             // 切换到中文字体 - 使用快乐星球体
             doc.setFont('HappyPlanet', 'normal')
             doc.setFontSize(fontSizeMM * 1.5) // 较小字号
-            // 左对齐
-            doc.text(item.meaning, x + cellPadding, startY + fourLinesHeight + fontSizeMM, {
+            // 左对齐，在第四线下方1mm处
+            doc.text(item.meaning, x + cellPadding, startY + fourLinesHeight + 1, {
               align: 'left',
               maxWidth: cellContentWidth
             })
@@ -209,8 +209,203 @@ export async function generatePDF(config: HandwritingConfig) {
       }
     }
 
+  } else if (config.practiceType === 'workbook') {
+    // 练习册模式
+    const gridSizeMap = { small: 1, medium: 1.5, large: 2 }
+    const gridSize = gridSizeMap[config.gridSize || 'medium'] // 默认1.5cm
+    const gridStyle = config.workbookStyle || 'tianzige'
+    const gridColor = config.gridColor || 'black'
+    const textColor = config.textColor || 'black'
+    
+    // 颜色映射
+    const colorMap = {
+      black: [0, 0, 0],
+      gray: [128, 128, 128],
+      blue: [0, 0, 255],
+      red: [255, 0, 0]
+    }
+    const gridColorRGB = colorMap[gridColor as keyof typeof colorMap] || [0, 0, 0]
+    
+    if (gridStyle === 'staff') {
+      // 五线谱特殊处理
+      const lineSpacing = 2.5 // 线间距 2.5mm
+      const staffSpacing = 10 // 谱间距 10mm
+      
+      const staffHeight = 4 * lineSpacing
+      const totalStaffHeight = staffHeight + staffSpacing
+      const staffCount = Math.floor((pageHeight - 2 * margin) / totalStaffHeight)
+      
+      doc.setDrawColor(gridColorRGB[0], gridColorRGB[1], gridColorRGB[2])
+      doc.setLineWidth(0.1)
+      
+      for (let i = 0; i < staffCount; i++) {
+          const startY = margin + i * totalStaffHeight
+          
+          // 画5条线
+          for (let j = 0; j < 5; j++) {
+              const y = startY + j * lineSpacing
+              doc.line(margin, y, pageWidth - margin, y)
+          }
+          
+          // 画左右边界线
+          doc.line(margin, startY, margin, startY + staffHeight)
+          doc.line(pageWidth - margin, startY, pageWidth - margin, startY + staffHeight)
+      }
+    } else {
+      // 根据格子大小设置固定列数
+      const colsMap = { small: 15, medium: 10, large: 7 }
+      const cols = colsMap[config.gridSize || 'medium']
+      
+      // 将cm转换为mm
+      const gridSizeMM = gridSize * 10
+      const cellSpacing = 3 // 格子间距3mm，让布局更美观
+      
+      // 计算总宽度和行数
+      const totalGridWidth = cols * gridSizeMM + (cols - 1) * cellSpacing
+      const rows = Math.floor((pageHeight - 2 * margin - 30) / (gridSizeMM + cellSpacing)) // 上下留30mm间距
+      
+      // 计算起始位置（水平居中）
+      const startX = margin + (contentWidth - totalGridWidth) / 2
+      const startY = margin + 15 // 上方留15mm间距
+      
+      // 绘制网格
+      doc.setDrawColor(gridColorRGB[0], gridColorRGB[1], gridColorRGB[2])
+      doc.setLineWidth(0.1)
+      
+      // 绘制水平线
+      for (let r = 0; r <= rows; r++) {
+        const y = startY + r * (gridSizeMM + cellSpacing)
+        doc.line(startX, y, startX + totalGridWidth, y)
+      }
+      
+      // 绘制垂直线
+      for (let c = 0; c <= cols; c++) {
+        const x = startX + c * (gridSizeMM + cellSpacing)
+        doc.line(x, startY, x, startY + rows * (gridSizeMM + cellSpacing))
+      }
+      
+      // 根据不同格子样式绘制特殊线条
+      if (gridStyle === 'tianzige') {
+        // 田字格：每个格子内部画十字虚线
+        doc.setDrawColor(gridColorRGB[0], gridColorRGB[1], gridColorRGB[2])
+        doc.setLineWidth(0.05)
+        
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            const cellX = startX + c * (gridSizeMM + cellSpacing)
+            const cellY = startY + r * (gridSizeMM + cellSpacing)
+            
+            // 画十字虚线
+            const midX = cellX + gridSizeMM / 2
+            const midY = cellY + gridSizeMM / 2
+            
+            // 手动绘制虚线
+            const dashLen = 1
+            const gapLen = 1
+            
+            // 水平中线
+            let dashX = cellX
+            while (dashX < cellX + gridSizeMM) {
+              doc.line(dashX, midY, Math.min(dashX + dashLen, cellX + gridSizeMM), midY)
+              dashX += dashLen + gapLen
+            }
+            
+            // 垂直中线
+            let dashY = cellY
+            while (dashY < cellY + gridSizeMM) {
+              doc.line(midX, dashY, midX, Math.min(dashY + dashLen, cellY + gridSizeMM))
+              dashY += dashLen + gapLen
+            }
+          }
+        }
+      } else if (gridStyle === 'mizi') {
+        // 米字格：每个格子画米字虚线
+        doc.setDrawColor(gridColorRGB[0], gridColorRGB[1], gridColorRGB[2])
+        doc.setLineWidth(0.05)
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            const cellX = startX + c * (gridSizeMM + cellSpacing)
+            const cellY = startY + r * (gridSizeMM + cellSpacing)
+            
+            // 手动绘制虚线
+            const dashLen = 1
+            const gapLen = 1
+            
+            // 画对角线
+            // 左上到右下
+            let d = 0
+            while (d < gridSizeMM) {
+              const x1 = cellX + d
+              const y1 = cellY + d
+              const x2 = Math.min(cellX + d + dashLen, cellX + gridSizeMM)
+              const y2 = Math.min(cellY + d + dashLen, cellY + gridSizeMM)
+              doc.line(x1, y1, x2, y2)
+              d += dashLen + gapLen
+            }
+            
+            // 右上到左下
+            d = 0
+            while (d < gridSizeMM) {
+              const x1 = cellX + gridSizeMM - d
+              const y1 = cellY + d
+              const x2 = Math.max(cellX + gridSizeMM - (d + dashLen), cellX)
+              const y2 = Math.min(cellY + d + dashLen, cellY + gridSizeMM)
+              doc.line(x1, y1, x2, y2)
+              d += dashLen + gapLen
+            }
+            
+            // 画十字中线
+            const midX = cellX + gridSizeMM / 2
+            const midY = cellY + gridSizeMM / 2
+            
+            // 水平中线
+            let dashX = cellX
+            while (dashX < cellX + gridSizeMM) {
+              doc.line(dashX, midY, Math.min(dashX + dashLen, cellX + gridSizeMM), midY)
+              dashX += dashLen + gapLen
+            }
+            
+            // 垂直中线
+            let dashY = cellY
+            while (dashY < cellY + gridSizeMM) {
+              doc.line(midX, dashY, midX, Math.min(dashY + dashLen, cellY + gridSizeMM))
+              dashY += dashLen + gapLen
+            }
+          }
+        }
+      } else if (gridStyle === 'pinyin') {
+        // 拼音格：四线三格
+        doc.setDrawColor(gridColorRGB[0], gridColorRGB[1], gridColorRGB[2])
+        doc.setLineWidth(0.1)
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            const cellX = startX + c * (gridSizeMM + cellSpacing)
+            const cellY = startY + r * (gridSizeMM + cellSpacing)
+            
+            // 四线三格：中间区域占主要部分，上下留白较大
+            const paddingY = gridSizeMM * 0.25 // 上下各留25%
+            const contentHeight = gridSizeMM * 0.5 // 中间内容占50%
+            const oneThird = contentHeight / 3
+            
+            const line1Y = cellY + paddingY
+            const line2Y = cellY + paddingY + oneThird
+            const line3Y = cellY + paddingY + 2 * oneThird
+            const line4Y = cellY + paddingY + 3 * oneThird
+            
+            const paddingX = 1 // 左右间距1mm
+            
+            // 画4条线
+            doc.line(cellX + paddingX, line1Y, cellX + gridSizeMM - paddingX, line1Y)
+            doc.line(cellX + paddingX, line2Y, cellX + gridSizeMM - paddingX, line2Y)
+            doc.line(cellX + paddingX, line3Y, cellX + gridSizeMM - paddingX, line3Y)
+            doc.line(cellX + paddingX, line4Y, cellX + gridSizeMM - paddingX, line4Y)
+          }
+        }
+      }
+    }
+    // square 样式只需要基础网格线，上面已经绘制
+
   } else {
-    // 原有的句子模式
     // 将文本分割成单词
     const words = config.text.split(' ')
     let currentY = margin + lineHeightMM

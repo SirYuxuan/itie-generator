@@ -7,10 +7,16 @@ export interface HandwritingConfig {
   linesPerPage: number
   fontFamily: string
   pageSize: 'A4' | 'Letter'
-  practiceType: 'sentence' | 'vocabulary'
+  practiceType: 'sentence' | 'vocabulary' | 'workbook'
   gridCols: number
   gridRows: number
   traceMode: boolean
+  // 练习册相关配置
+  workbookStyle?: 'tianzige' | 'mizi' | 'pinyin' | 'square' | 'staff'
+  gridSize?: 'small' | 'medium' | 'large'
+  gridColor?: 'black' | 'gray' | 'blue' | 'red'
+  textColor?: 'black' | 'gray' | 'blue' | 'red'
+  pageCount?: number
 }
 
 export const DEFAULT_CONFIG: HandwritingConfig = {
@@ -26,4 +32,9 @@ export const DEFAULT_CONFIG: HandwritingConfig = {
   gridCols: 4,
   gridRows: 14,
   traceMode: false,
+  workbookStyle: 'tianzige',
+  gridSize: 'medium',
+  gridColor: 'red',
+  textColor: 'black',
+  pageCount: 1,
 }

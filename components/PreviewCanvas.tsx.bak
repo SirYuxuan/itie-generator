@@ -141,193 +141,162 @@ export default function PreviewCanvas({ config }: PreviewCanvasProps) {
       }
       const gridColor = colorMap[(config.gridColor || 'black') as keyof typeof colorMap]
       
-      if (gridStyle === 'staff') {
-        // 五线谱特殊处理
-        const lineSpacing = 10 // 线间距
-        const staffSpacing = 40 // 谱间距
-        const availableWidth = rect.width - 2 * margin
-        const availableHeight = rect.height - 2 * margin
-        
-        const staffHeight = 4 * lineSpacing
-        const totalStaffHeight = staffHeight + staffSpacing
-        const staffCount = Math.floor(availableHeight / totalStaffHeight)
-        
-        ctx.strokeStyle = gridColor
-        ctx.lineWidth = 1
-        
-        for (let i = 0; i < staffCount; i++) {
-            const startY = margin + i * totalStaffHeight
-            
-            // 画5条线
-            for (let j = 0; j < 5; j++) {
-                const y = startY + j * lineSpacing
-                ctx.beginPath()
-                ctx.moveTo(margin, y)
-                ctx.lineTo(margin + availableWidth, y)
-                ctx.stroke()
-            }
-            
-            // 画左右边界线
-            ctx.beginPath()
-            ctx.moveTo(margin, startY)
-            ctx.lineTo(margin, startY + staffHeight)
-            ctx.stroke()
-            
-            ctx.beginPath()
-            ctx.moveTo(margin + availableWidth, startY)
-            ctx.lineTo(margin + availableWidth, startY + staffHeight)
-            ctx.stroke()
-        }
-      } else {
-        // 根据格子大小设置固定列数
-        const colsMap = { small: 15, medium: 10, large: 7 }
-        const cols = colsMap[(config.gridSize || 'medium') as keyof typeof colsMap]
-        
-        const cellSpacing = 3 // 格子间距3px
-        
-        // 平铺填满整个预览区域
-        const availableWidth = rect.width - 2 * margin
-        const availableHeight = rect.height - 2 * margin
-        const gridSizePx = Math.min(
-          (availableWidth - (cols - 1) * cellSpacing) / cols,
-          (availableHeight - 9 * cellSpacing) / 10 // 假设最多10行
-        )
-        
-        const rows = Math.floor((availableHeight - 9 * cellSpacing) / (gridSizePx + cellSpacing))
-        const totalGridWidth = cols * gridSizePx + (cols - 1) * cellSpacing
-        const totalGridHeight = rows * gridSizePx + (rows - 1) * cellSpacing
-        
-        // 居中显示
-        const startX = margin + (availableWidth - totalGridWidth) / 2
-        const startY = margin + (availableHeight - totalGridHeight) / 2
-        
-        // 绘制网格
-        ctx.strokeStyle = gridColor
-        ctx.lineWidth = 1
-        
-        // 绘制水平线
-        for (let r = 0; r <= rows; r++) {
-          const y = startY + r * (gridSizePx + cellSpacing)
-          ctx.beginPath()
-          ctx.moveTo(startX, y)
-          ctx.lineTo(startX + totalGridWidth, y)
-          ctx.stroke()
-        }
-        
-        // 绘制垂直线
-        for (let c = 0; c <= cols; c++) {
-          const x = startX + c * (gridSizePx + cellSpacing)
-          ctx.beginPath()
-          ctx.moveTo(x, startY)
-          ctx.lineTo(x, startY + rows * (gridSizePx + cellSpacing))
-          ctx.stroke()
-        }
-        
-        // 根据不同格子样式绘制特殊线条
-        if (gridStyle === 'tianzige') {
-          // 田字格：四周边框，里面十字虚线
-          ctx.setLineDash([3, 3]) // 设置虚线
-          ctx.lineWidth = 0.5
-          for (let r = 0; r < rows; r++) {
-            for (let c = 0; c < cols; c++) {
-              const cellX = startX + c * (gridSizePx + cellSpacing)
-              const cellY = startY + r * (gridSizePx + cellSpacing)
-              
-              // 画十字虚线
-              const midX = cellX + gridSizePx / 2
-              const midY = cellY + gridSizePx / 2
-              ctx.beginPath()
-              ctx.moveTo(cellX, midY)
-              ctx.lineTo(cellX + gridSizePx, midY)
-              ctx.stroke()
-              
-              ctx.beginPath()
-              ctx.moveTo(midX, cellY)
-              ctx.lineTo(midX, cellY + gridSizePx)
-              ctx.stroke()
-            }
+      // 根据格子大小设置固定列数
+      const colsMap = { small: 15, medium: 10, large: 7 }
+      const cols = colsMap[(config.gridSize || 'medium') as keyof typeof colsMap]
+      
+      const cellSpacing = 3 // 格子间距3px
+      
+      // 平铺填满整个预览区域
+      const availableWidth = rect.width - 2 * margin
+      const availableHeight = rect.height - 2 * margin
+      const gridSizePx = Math.min(
+        (availableWidth - (cols - 1) * cellSpacing) / cols,
+        (availableHeight - 9 * cellSpacing) / 10 // 假设最多10行
+      )
+      
+      const rows = Math.floor((availableHeight - 9 * cellSpacing) / (gridSizePx + cellSpacing))
+      const totalGridWidth = cols * gridSizePx + (cols - 1) * cellSpacing
+      const totalGridHeight = rows * gridSizePx + (rows - 1) * cellSpacing
+      
+      // 居中显示
+      const startX = margin + (availableWidth - totalGridWidth) / 2
+      const startY = margin + (availableHeight - totalGridHeight) / 2
+      
+      // 绘制网格
+      ctx.strokeStyle = gridColor
+      ctx.lineWidth = 1
+      
+      // 绘制水平线
+      for (let r = 0; r <= rows; r++) {
+        const y = startY + r * (gridSizePx + cellSpacing)
+        if (gridStyle === 'staff') {
+          // 五线谱：每5条线为一组，第1、3、5条线加粗
+          const lineInGroup = r % 5
+          if (lineInGroup === 0 || lineInGroup === 2 || lineInGroup === 4) {
+            ctx.lineWidth = 2
+          } else {
+            ctx.lineWidth = 1
           }
-          ctx.setLineDash([]) // 恢复实线
-        } else if (gridStyle === 'mizi') {
-          // 米字格：四周边框，里面米字虚线
-          ctx.setLineDash([3, 3]) // 设置虚线
-          ctx.lineWidth = 0.5
-          for (let r = 0; r < rows; r++) {
-            for (let c = 0; c < cols; c++) {
-              const cellX = startX + c * (gridSizePx + cellSpacing)
-              const cellY = startY + r * (gridSizePx + cellSpacing)
-              
-              // 画米字虚线（对角线+十字线）
-              ctx.beginPath()
-              ctx.moveTo(cellX, cellY)
-              ctx.lineTo(cellX + gridSizePx, cellY + gridSizePx)
-              ctx.stroke()
-              
-              ctx.beginPath()
-              ctx.moveTo(cellX + gridSizePx, cellY)
-              ctx.lineTo(cellX, cellY + gridSizePx)
-              ctx.stroke()
-              
-              // 画十字中线
-              const midX = cellX + gridSizePx / 2
-              const midY = cellY + gridSizePx / 2
-              ctx.beginPath()
-              ctx.moveTo(cellX, midY)
-              ctx.lineTo(cellX + gridSizePx, midY)
-              ctx.stroke()
-              
-              ctx.beginPath()
-              ctx.moveTo(midX, cellY)
-              ctx.lineTo(midX, cellY + gridSizePx)
-              ctx.stroke()
-            }
-          }
-          ctx.setLineDash([]) // 恢复实线
-        } else if (gridStyle === 'pinyin') {
-          // 拼音格：四线三格，左右间距小一点，上下大一点
-          ctx.lineWidth = 0.8
-          for (let r = 0; r < rows; r++) {
-            for (let c = 0; c < cols; c++) {
-              const cellX = startX + c * (gridSizePx + cellSpacing)
-              const cellY = startY + r * (gridSizePx + cellSpacing)
-              
-              // 四线三格：中间区域占主要部分，上下留白较大
-              const paddingY = gridSizePx * 0.25 // 上下各留25%
-              const contentHeight = gridSizePx * 0.5 // 中间内容占50%
-              const oneThird = contentHeight / 3
-              
-              const line1Y = cellY + paddingY
-              const line2Y = cellY + paddingY + oneThird
-              const line3Y = cellY + paddingY + 2 * oneThird
-              const line4Y = cellY + paddingY + 3 * oneThird
-              
-              const paddingX = 4 // 左右间距
-              
-              // 画4条线
-              ctx.beginPath()
-              ctx.moveTo(cellX + paddingX, line1Y)
-              ctx.lineTo(cellX + gridSizePx - paddingX, line1Y)
-              ctx.stroke()
-              
-              ctx.beginPath()
-              ctx.moveTo(cellX + paddingX, line2Y)
-              ctx.lineTo(cellX + gridSizePx - paddingX, line2Y)
-              ctx.stroke()
-              
-              ctx.beginPath()
-              ctx.moveTo(cellX + paddingX, line3Y)
-              ctx.lineTo(cellX + gridSizePx - paddingX, line3Y)
-              ctx.stroke()
-              
-              ctx.beginPath()
-              ctx.moveTo(cellX + paddingX, line4Y)
-              ctx.lineTo(cellX + gridSizePx - paddingX, line4Y)
-              ctx.stroke()
-            }
-          }
+        } else {
+          ctx.lineWidth = 1
         }
+        ctx.beginPath()
+        ctx.moveTo(startX, y)
+        ctx.lineTo(startX + totalGridWidth, y)
+        ctx.stroke()
       }
-      // square 样式只需要基础网格线，上面已经绘制
+      
+      // 绘制垂直线
+      for (let c = 0; c <= cols; c++) {
+        const x = startX + c * (gridSizePx + cellSpacing)
+        if (gridStyle === 'staff') {
+          // 五线谱：每5条线为一组，第1、3、5条线加粗
+          const lineInGroup = c % 5
+          if (lineInGroup === 0 || lineInGroup === 2 || lineInGroup === 4) {
+            ctx.lineWidth = 2
+          } else {
+            ctx.lineWidth = 1
+          }
+        } else {
+          ctx.lineWidth = 1
+        }
+        ctx.beginPath()
+        ctx.moveTo(x, startY)
+        ctx.lineTo(x, startY + rows * (gridSizePx + cellSpacing))
+        ctx.stroke()
+      }
+      
+      // 根据不同格子样式绘制特殊线条
+      if (gridStyle === 'tianzige') {
+        // 田字格：四周边框，里面十字虚线
+        ctx.setLineDash([3, 3]) // 设置虚线
+        ctx.lineWidth = 0.5
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            const cellX = startX + c * (gridSizePx + cellSpacing)
+            const cellY = startY + r * (gridSizePx + cellSpacing)
+            
+            // 画十字虚线
+            const midX = cellX + gridSizePx / 2
+            const midY = cellY + gridSizePx / 2
+            ctx.beginPath()
+            ctx.moveTo(cellX, midY)
+            ctx.lineTo(cellX + gridSizePx, midY)
+            ctx.stroke()
+            
+            ctx.beginPath()
+            ctx.moveTo(midX, cellY)
+            ctx.lineTo(midX, cellY + gridSizePx)
+            ctx.stroke()
+          }
+        }
+        ctx.setLineDash([]) // 恢复实线
+      } else if (gridStyle === 'mizi') {
+        // 米字格：四周边框，里面米字虚线
+        ctx.setLineDash([3, 3]) // 设置虚线
+        ctx.lineWidth = 0.5
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            const cellX = startX + c * (gridSizePx + cellSpacing)
+            const cellY = startY + r * (gridSizePx + cellSpacing)
+            
+            // 画米字虚线（对角线+十字线）
+            ctx.beginPath()
+            ctx.moveTo(cellX, cellY)
+            ctx.lineTo(cellX + gridSizePx, cellY + gridSizePx)
+            ctx.stroke()
+            
+            ctx.beginPath()
+            ctx.moveTo(cellX + gridSizePx, cellY)
+            ctx.lineTo(cellX, cellY + gridSizePx)
+            ctx.stroke()
+            
+            // 画十字中线
+            const midX = cellX + gridSizePx / 2
+            const midY = cellY + gridSizePx / 2
+            ctx.beginPath()
+            ctx.moveTo(cellX, midY)
+            ctx.lineTo(cellX + gridSizePx, midY)
+            ctx.stroke()
+            
+            ctx.beginPath()
+            ctx.moveTo(midX, cellY)
+            ctx.lineTo(midX, cellY + gridSizePx)
+            ctx.stroke()
+          }
+        }
+        ctx.setLineDash([]) // 恢复实线
+      } else if (gridStyle === 'pinyin') {
+        // 拼音格：四线三格，左右间距小一点，上下大一点
+        ctx.lineWidth = 0.8
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            const cellX = startX + c * (gridSizePx + cellSpacing)
+            const cellY = startY + r * (gridSizePx + cellSpacing)
+            
+            // 四线三格：上1/4是拼音区，中间2/4是汉字区，下1/4是练习区
+            const line1Y = cellY + gridSizePx / 4
+            const line2Y = cellY + gridSizePx / 2
+            const line3Y = cellY + 3 * gridSizePx / 4
+            
+            ctx.beginPath()
+            ctx.moveTo(cellX + 2, line1Y) // 左右小间距
+            ctx.lineTo(cellX + gridSizePx - 2, line1Y)
+            ctx.stroke()
+            
+            ctx.beginPath()
+            ctx.moveTo(cellX + 2, line2Y)
+            ctx.lineTo(cellX + gridSizePx - 2, line2Y)
+            ctx.stroke()
+            
+            ctx.beginPath()
+            ctx.moveTo(cellX + 2, line3Y)
+            ctx.lineTo(cellX + gridSizePx - 2, line3Y)
+            ctx.stroke()
+          }
+        }
+      // square 和 staff 样式只需要基础网格线，上面已经绘制
 
     } else {
       let currentY = margin + lineHeight
@@ -422,7 +391,6 @@ export default function PreviewCanvas({ config }: PreviewCanvasProps) {
 
         currentY += lineHeight
       }
-    }
     }
 
     render()

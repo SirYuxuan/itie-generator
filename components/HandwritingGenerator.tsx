@@ -4,7 +4,7 @@ import { generatePDF } from '@/lib/pdfGenerator'
 import { DEFAULT_CONFIG, HandwritingConfig } from '@/lib/types'
 import {
     BookOutlined,
-    FileTextOutlined
+    EditOutlined
 } from '@ant-design/icons'
 import {
     Button,
@@ -45,6 +45,9 @@ export default function HandwritingGenerator() {
   const [generationMode, setGenerationMode] = useState<'random' | 'sequential'>('random')
   const [pageCount, setPageCount] = useState(1)
   const [startPage, setStartPage] = useState(1)
+  
+  // 练习册相关状态
+  const [practiceType, setPracticeType] = useState<'vocabulary' | 'workbook'>('vocabulary')
   
   const WORDS_PER_PAGE = 56
 
@@ -115,7 +118,8 @@ export default function HandwritingGenerator() {
   }
 
   const handleGeneratePDF = async () => {
-    if (!config.text) {
+    // 练习册模式不需要检查文本内容
+    if (practiceType !== 'workbook' && !config.text) {
       message.warning('请先生成或输入内容')
       return
     }
@@ -150,20 +154,42 @@ export default function HandwritingGenerator() {
           </div>
           <Menu
             mode="inline"
-            selectedKeys={[dictSource]}
+            selectedKeys={[practiceType === 'vocabulary' ? dictSource : practiceType]}
             style={{ borderRight: 0 }}
             items={[
               {
-                key: 'cet4',
+                key: 'vocabulary',
                 icon: <BookOutlined />,
-                label: 'CET-4 词汇练习',
-                onClick: () => setDictSource('cet4')
+                label: '英语字帖',
+                children: [
+                  {
+                    key: 'cet4',
+                    label: 'CET-4 词汇练习',
+                    onClick: () => {
+                      setPracticeType('vocabulary')
+                      setDictSource('cet4')
+                      updateConfig('practiceType', 'vocabulary')
+                    }
+                  },
+                  {
+                    key: 'none',
+                    label: '自定义文本',
+                    onClick: () => {
+                      setPracticeType('vocabulary')
+                      setDictSource('none')
+                      updateConfig('practiceType', 'vocabulary')
+                    }
+                  }
+                ]
               },
               {
-                key: 'none',
-                icon: <FileTextOutlined />,
-                label: '自定义文本',
-                onClick: () => setDictSource('none')
+                key: 'workbook',
+                icon: <EditOutlined />,
+                label: '练习册',
+                onClick: () => {
+                  setPracticeType('workbook')
+                  updateConfig('practiceType', 'workbook')
+                }
               }
             ]}
           />
@@ -187,73 +213,117 @@ export default function HandwritingGenerator() {
               {/* 左侧功能区 */}
               <Col span={10} style={{ height: '100%', overflowY: 'auto', paddingRight: '8px' }}>
                 <Card title="生成配置" className="mb-4 shadow-sm">
-                  {dictSource === 'cet4' ? (
+                  {practiceType === 'vocabulary' ? (
+                    dictSource === 'cet4' ? (
+                      <Form layout="vertical">
+                        <Form.Item label="生成模式">
+                          <Radio.Group 
+                            value={generationMode} 
+                            onChange={e => setGenerationMode(e.target.value)}
+                            buttonStyle="solid"
+                          >
+                            <Radio.Button value="random">随机抽取</Radio.Button>
+                            <Radio.Button value="sequential">顺序生成</Radio.Button>
+                          </Radio.Group>
+                        </Form.Item>
+
+                        {generationMode === 'sequential' && (
+                          <Form.Item label={`起始页码 (共 ${maxPages} 页)`}>
+                            <InputNumber 
+                              min={1} 
+                              max={maxPages} 
+                              value={startPage} 
+                              onChange={val => setStartPage(val || 1)} 
+                              style={{ width: '100%' }}
+                            />
+                          </Form.Item>
+                        )}
+
+                        <Form.Item label="生成页数">
+                          <Row gutter={16}>
+                            <Col span={16}>
+                              <Slider
+                                min={1}
+                                max={generationMode === 'random' ? 20 : (maxPages - startPage + 1)}
+                                value={pageCount}
+                                onChange={setPageCount}
+                              />
+                            </Col>
+                            <Col span={8}>
+                              <InputNumber
+                                min={1}
+                                max={generationMode === 'random' ? 20 : (maxPages - startPage + 1)}
+                                value={pageCount}
+                                onChange={val => setPageCount(val || 1)}
+                                style={{ width: '100%' }}
+                              />
+                            </Col>
+                          </Row>
+                          <div className="text-gray-400 text-xs mt-1">
+                            每页 {WORDS_PER_PAGE} 词，共 {pageCount * WORDS_PER_PAGE} 词
+                          </div>
+                        </Form.Item>
+
+                        <Button 
+                          type="primary" 
+                          onClick={generateFromDict} 
+                          block 
+                          size="large"
+                        >
+                          生成单词列表
+                        </Button>
+                      </Form>
+                    ) : (
+                      <div className="text-gray-500 mb-4">
+                        请在下方直接输入或粘贴想要练习的单词和释义。
+                      </div>
+                    )
+                  ) : (
+                    // 练习册配置
                     <Form layout="vertical">
-                      <Form.Item label="生成模式">
+                      <Form.Item label="格子样式">
                         <Radio.Group 
-                          value={generationMode} 
-                          onChange={e => setGenerationMode(e.target.value)}
+                          value={config.workbookStyle} 
+                          onChange={e => updateConfig('workbookStyle', e.target.value)}
                           buttonStyle="solid"
                         >
-                          <Radio.Button value="random">随机抽取</Radio.Button>
-                          <Radio.Button value="sequential">顺序生成</Radio.Button>
+                          <Radio.Button value="tianzige">田字格</Radio.Button>
+                          <Radio.Button value="mizi">米字格</Radio.Button>
+                          <Radio.Button value="pinyin">拼音格</Radio.Button>
+                          <Radio.Button value="square">方块格</Radio.Button>
+                          <Radio.Button value="staff">五线谱</Radio.Button>
                         </Radio.Group>
                       </Form.Item>
 
-                      {generationMode === 'sequential' && (
-                        <Form.Item label={`起始页码 (共 ${maxPages} 页)`}>
-                          <InputNumber 
-                            min={1} 
-                            max={maxPages} 
-                            value={startPage} 
-                            onChange={val => setStartPage(val || 1)} 
-                            style={{ width: '100%' }}
-                          />
-                        </Form.Item>
-                      )}
-
-                      <Form.Item label="生成页数">
-                        <Row gutter={16}>
-                          <Col span={16}>
-                            <Slider
-                              min={1}
-                              max={generationMode === 'random' ? 20 : (maxPages - startPage + 1)}
-                              value={pageCount}
-                              onChange={setPageCount}
-                            />
-                          </Col>
-                          <Col span={8}>
-                            <InputNumber
-                              min={1}
-                              max={generationMode === 'random' ? 20 : (maxPages - startPage + 1)}
-                              value={pageCount}
-                              onChange={val => setPageCount(val || 1)}
-                              style={{ width: '100%' }}
-                            />
-                          </Col>
-                        </Row>
-                        <div className="text-gray-400 text-xs mt-1">
-                          每页 {WORDS_PER_PAGE} 词，共 {pageCount * WORDS_PER_PAGE} 词
-                        </div>
+                      <Form.Item label="格子大小">
+                        <Radio.Group 
+                          value={config.gridSize} 
+                          onChange={e => updateConfig('gridSize', e.target.value)}
+                          buttonStyle="solid"
+                        >
+                          <Radio.Button value="small">小格 (1cm)</Radio.Button>
+                          <Radio.Button value="medium">中格 (1.5cm)</Radio.Button>
+                          <Radio.Button value="large">大格 (2cm)</Radio.Button>
+                        </Radio.Group>
                       </Form.Item>
 
-                      <Button 
-                        type="primary" 
-                        onClick={generateFromDict} 
-                        block 
-                        size="large"
-                      >
-                        生成单词列表
-                      </Button>
+                      <Form.Item label="格子颜色">
+                        <Radio.Group 
+                          value={config.gridColor} 
+                          onChange={e => updateConfig('gridColor', e.target.value)}
+                          buttonStyle="solid"
+                        >
+                          <Radio.Button value="black">黑色</Radio.Button>
+                          <Radio.Button value="gray">灰色</Radio.Button>
+                          <Radio.Button value="blue">蓝色</Radio.Button>
+                          <Radio.Button value="red">红色</Radio.Button>
+                        </Radio.Group>
+                      </Form.Item>
                     </Form>
-                  ) : (
-                    <div className="text-gray-500 mb-4">
-                      请在下方直接输入或粘贴想要练习的单词和释义。
-                    </div>
                   )}
                 </Card>
 
-                {dictSource !== 'cet4' && (
+                {dictSource !== 'cet4' && practiceType !== 'workbook' && (
                   <Card title="内容预览 / 编辑" className="shadow-sm" bodyStyle={{ padding: 0 }}>
                     <TextArea
                       value={config.text}
