@@ -30,7 +30,7 @@ export default function PreviewCanvas({ config }: PreviewCanvasProps) {
     ctx.fillRect(0, 0, rect.width, rect.height)
 
     // 设置字体
-    let fontFamily = config.fontFamily
+    const fontFamily = config.fontFamily
     // if (config.fontFamily === 'Hengshui') {
     //   fontFamily = 'Caveat, cursive'
     // }
@@ -43,9 +43,9 @@ export default function PreviewCanvas({ config }: PreviewCanvasProps) {
     if (config.practiceType === 'vocabulary') {
       // 单词表模式预览
       const cols = config.gridCols || 4
-      const rows = config.gridRows || 14
+      // const rows = config.gridRows || 14
       const colWidth = (rect.width - 2 * margin) / cols
-      const rowHeight = (rect.height - 2 * margin) / rows // 预览高度有限，这里只是示意
+      // const rowHeight = (rect.height - 2 * margin) / rows // 预览高度有限，这里只是示意
 
       // 解析单词列表
       const vocabList = config.text.split('\n').filter((line: string) => line.trim()).map((line: string) => {
@@ -129,7 +129,7 @@ export default function PreviewCanvas({ config }: PreviewCanvasProps) {
 
     } else if (config.practiceType === 'workbook') {
       // 练习册模式预览
-      const gridSizeMap = { small: 1, medium: 1.5, large: 2 }
+      // const gridSizeMap = { small: 1, medium: 1.5, large: 2 }
       const gridStyle = config.workbookStyle || 'tianzige'
       
       // 颜色映射
@@ -429,9 +429,12 @@ export default function PreviewCanvas({ config }: PreviewCanvasProps) {
     
     // 确保字体加载完成后重新渲染
     const fontString = `${config.fontSize}px ${config.fontFamily}`
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     if ((document as any).fonts) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (document as any).fonts.load(fontString).then(() => {
         render()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       }).catch((err: any) => {
         console.error('Font loading failed:', err)
       })

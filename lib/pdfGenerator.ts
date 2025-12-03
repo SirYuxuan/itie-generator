@@ -132,7 +132,7 @@ export async function generatePDF(config: HandwritingConfig) {
           // 绘制四线三格
           const cellPadding = 2
           const cellContentWidth = colWidth - 2 * cellPadding
-          const cellContentHeight = rowHeight - 2 * cellPadding
+          // const cellContentHeight = rowHeight - 2 * cellPadding
           
           // 计算四线位置 (垂直居中)
           // 四线三格总高度固定为 9mm
@@ -215,7 +215,7 @@ export async function generatePDF(config: HandwritingConfig) {
     const gridSize = gridSizeMap[config.gridSize || 'medium'] // 默认1.5cm
     const gridStyle = config.workbookStyle || 'tianzige'
     const gridColor = config.gridColor || 'black'
-    const textColor = config.textColor || 'black'
+    // const textColor = config.textColor || 'black'
     
     // 颜色映射
     const colorMap = {
@@ -407,7 +407,7 @@ export async function generatePDF(config: HandwritingConfig) {
 
   } else {
     // 将文本分割成单词
-    const words = config.text.split(' ')
+    // const words = config.text.split(' ')
     let currentY = margin + lineHeightMM
 
     // 绘制字帖

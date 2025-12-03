@@ -73,7 +73,7 @@ export default function HandwritingGenerator() {
               meaningStartIndex = 2
             }
 
-            let meaning = parts.slice(meaningStartIndex).join(' ')
+            const meaning = parts.slice(meaningStartIndex).join(' ')
             if (word && meaning) {
               words.push({ word, meaning })
             }
@@ -113,6 +113,7 @@ export default function HandwritingGenerator() {
     message.success(`已生成 ${selected.length} 个单词`)
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const updateConfig = (key: keyof HandwritingConfig, value: any) => {
     setConfig(prev => ({ ...prev, [key]: value }))
   }
